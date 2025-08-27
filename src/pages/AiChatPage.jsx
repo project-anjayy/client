@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import http from '../libraries/http';
 
 const AiChatPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -13,16 +14,42 @@ const AiChatPage = () => {
       navigate('/login');
     }
   }, [user, navigate]);
-  const [messages, setMessages] = useState([
-    {
-      role: 'system',
-      content: 'Halo! Saya asisten AI untuk rekomendasi event olahraga.\n\n💡 Sementara ketik kategori dan lokasi secara terpisah:\n\n� Format yang didukung:\n• Kategori: "soccer", "basketball", "running"\n• Lokasi: "Jakarta", "Bandung", "Surabaya"\n\nContoh chat:\n1️⃣ "soccer"\n2️⃣ "jakarta"\n\n🤖 Sedang menunggu backend update untuk input bebas!'
+  
+  // Load chat history from localStorage
+  const loadChatHistory = () => {
+    try {
+      const saved = localStorage.getItem('aiChatHistory');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
     }
-  ]);
+    return [
+      {
+        role: 'assistant',
+        content: '👋 Halo! Selamat datang di AI Sports Recommendation!\n\nSaya akan membantu Anda menemukan event olahraga yang perfect untuk Anda!\n\nApa jenis olahraga yang ingin Anda ikuti? Tulis saja dengan bebas, misalnya:\n• "Saya mau main bola"\n• "Pengen basket"\n• "Cari event lari"\n• "Mau coba yoga"\n\nAyo mulai! 🏃‍♂️⚽🏀'
+      }
+    ];
+  };
+
+  // Save chat history to localStorage
+  const saveChatHistory = (messages) => {
+    try {
+      localStorage.setItem('aiChatHistory', JSON.stringify(messages));
+    } catch (error) {
+      console.error('Error saving chat history:', error);
+    }
+  };
+  
+  const [messages, setMessages] = useState(loadChatHistory());
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendedEvents, setRecommendedEvents] = useState([]);
-  const [serverStatus, setServerStatus] = useState('checking'); // checking, online, offline
+  const [conversationState, setConversationState] = useState('initial');
+  const [detectedSport, setDetectedSport] = useState('');
+  const [detectedLocation, setDetectedLocation] = useState('');
+  const [serverStatus, setServerStatus] = useState('checking');
   const [serverCheckAttempts, setServerCheckAttempts] = useState(0);
   const messagesEndRef = useRef(null);
 
@@ -33,6 +60,38 @@ const AiChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    saveChatHistory(messages);
+  }, [messages]);
+
+  // Check if returning from event detail page and show welcome back message
+  useEffect(() => {
+    if (location.state?.fromEventDetail) {
+      // Restore chat history if provided
+      if (location.state?.restoreHistory) {
+        setMessages(location.state.restoreHistory);
+      }
+      
+      // Add welcome back message if history has messages
+      if (messages.length > 1) {
+        const welcomeBackMessage = {
+          role: 'assistant',
+          content: '👋 Selamat datang kembali! Bagaimana event yang baru saja Anda lihat? Apakah Anda ingin mencari event lain atau ada pertanyaan tentang event tersebut?'
+        };
+        
+        // Only add if the last message is not already a welcome back message
+        const lastMessage = messages[messages.length - 1];
+        if (!lastMessage.content.includes('Selamat datang kembali')) {
+          setMessages(prev => [...prev, welcomeBackMessage]);
+        }
+      }
+      
+      // Clear the navigation state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Check server status on mount - focus on AI endpoint
   useEffect(() => {
@@ -58,7 +117,7 @@ const AiChatPage = () => {
     if (user && serverCheckAttempts < 2) {
       checkServerStatus();
     }
-  }, [user, serverCheckAttempts]);
+  }, [user]);
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -83,11 +142,11 @@ const AiChatPage = () => {
     }
 
     try {
-      // Prepare history array - filter out system messages and format properly
+      // Prepare history array - include both user and assistant messages for context
       const history = newMessages
-        .filter(msg => msg.role === 'user') // Only user messages
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant') // Include both for context
         .map(msg => ({
-          role: 'user',
+          role: msg.role,
           content: msg.content
         }));
       
@@ -97,11 +156,11 @@ const AiChatPage = () => {
       }
       
       console.log('Sending AI chat request:');
-      console.log('- Endpoint: POST /api/events/recommend/chat');
+      console.log('- Endpoint: POST /api/ai-chat/chat');
       console.log('- History array:', history);
       console.log('- History length:', history.length);
       
-      const response = await http.post('/api/events/recommend/chat', {
+      const response = await http.post('/api/ai-chat/chat', {
         history: history
       });
 
@@ -197,7 +256,7 @@ const AiChatPage = () => {
       ];
       
       console.log('Testing AI endpoint with:', testHistory);
-      const response = await http.post('/api/events/recommend/chat', {
+      const response = await http.post('/api/ai-chat/chat', {
         history: testHistory
       });
       
@@ -227,6 +286,21 @@ const AiChatPage = () => {
       setMessages(prev => [...prev, errorMessage]);
     }
     setIsLoading(false);
+  };
+
+  const handleClearHistory = () => {
+    const confirmClear = window.confirm('Apakah Anda yakin ingin menghapus semua riwayat chat?');
+    if (confirmClear) {
+      const initialMessage = [
+        {
+          role: 'assistant',
+          content: '👋 Halo! Selamat datang di AI Sports Recommendation!\n\nSaya akan membantu Anda menemukan event olahraga yang perfect untuk Anda!\n\nApa jenis olahraga yang ingin Anda ikuti? Tulis saja dengan bebas, misalnya:\n• "Saya mau main bola"\n• "Pengen basket"\n• "Cari event lari"\n• "Mau coba yoga"\n\nAyo mulai! 🏃‍♂️⚽🏀'
+        }
+      ];
+      setMessages(initialMessage);
+      setRecommendedEvents([]);
+      localStorage.removeItem('aiChatHistory');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -295,14 +369,20 @@ const AiChatPage = () => {
                   onClick={() => navigate('/dashboard')}
                   className="bg-white/20 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-all duration-300"
                 >
-                  ← Kembali ke Dashboard
+                  ← Dashboard
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  className="bg-red-600/80 backdrop-blur-sm border border-red-400/30 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all duration-300"
+                >
+                  🗑️ Clear Chat
                 </button>
                 <button
                   onClick={handleTestAI}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:from-gray-600 disabled:to-gray-700 transition-all duration-300 shadow-lg"
                 >
-                  🧪 Test AI Endpoint
+                  🧪 Test AI
                 </button>
               </div>
             </div>
@@ -372,7 +452,7 @@ const AiChatPage = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ketik kategori (soccer/basketball/running) atau lokasi (Jakarta/Bandung)"
+                    placeholder="Ketik keinginan Anda, misalnya: 'Saya mau main bola di Jakarta'"
                     className="flex-1 bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                     disabled={isLoading}
                   />
@@ -408,31 +488,61 @@ const AiChatPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {recommendedEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-3 hover:bg-black/40 transition-all duration-300 hover:shadow-lg"
+                      className="bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-3 hover:bg-black/40 transition-all duration-300 hover:shadow-lg cursor-pointer group"
+                      onClick={() => {
+                        // Navigate to event detail with chat history preserved
+                        navigate(`/event/${event.id}`, {
+                          state: { 
+                            fromAiChat: true,
+                            chatHistory: messages 
+                          }
+                        });
+                      }}
                     >
-                      <h4 className="font-semibold text-white text-sm mb-1">
+                      <h4 className="font-semibold text-white text-sm mb-2 group-hover:text-blue-300 transition-colors">
                         {event.title}
                       </h4>
-                      <p className="text-xs text-white/70 mb-1">
-                        📍 {event.location}
-                      </p>
-                      <p className="text-xs text-blue-300 mb-1">
-                        🏷️ {event.category}
-                      </p>
-                      <p className="text-xs text-white/60">
-                        🕒 {formatDate(event.time)}
-                      </p>
-                      {event.duration && (
-                        <p className="text-xs text-white/60">
-                          ⏱️ {event.duration} menit
+                      <div className="space-y-1">
+                        <p className="text-xs text-white/70 flex items-center">
+                          <span className="mr-1">📍</span> {event.location}
                         </p>
-                      )}
+                        <p className="text-xs text-blue-300 flex items-center">
+                          <span className="mr-1">🏷️</span> {event.category}
+                        </p>
+                        <p className="text-xs text-white/60 flex items-center">
+                          <span className="mr-1">🕒</span> {formatDate(event.time)}
+                        </p>
+                        {event.duration && (
+                          <p className="text-xs text-white/60 flex items-center">
+                            <span className="mr-1">⏱️</span> {event.duration} menit
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
+                          <p className="text-xs text-green-300 flex items-center">
+                            <span className="mr-1">👥</span> {event.available_slots}/{event.total_slots} slot
+                          </p>
+                          <div className="text-xs bg-blue-600/80 group-hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors">
+                            Lihat Detail →
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
+                  
+                  {recommendedEvents.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <button
+                        onClick={() => navigate('/browse-events')}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                      >
+                        Lihat Semua Event
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -443,7 +553,7 @@ const AiChatPage = () => {
         <div className={`rounded-lg p-4 mt-6 backdrop-blur-md border ${
           serverStatus === 'offline' 
             ? 'bg-red-600/20 border-red-400/30' 
-            : 'bg-black/20 border-white/20'
+            : 'bg-green-600/20 border-green-400/30'
         }`}>
           {serverStatus === 'offline' ? (
             <>
@@ -451,22 +561,22 @@ const AiChatPage = () => {
                 ⚠️ AI Endpoint Status: Error
               </h3>
               <ul className="text-sm text-red-300/80 space-y-1">
-                <li>• AI Chat endpoint bermasalah - menggunakan mock response</li>
-                <li>• Update terbaru: Backend mendukung input kalimat bebas</li>
-                <li>• AI auto-mapping kategori dan bertanya jika info kurang</li>
-                <li>• Tunggu tim backend memperbaiki untuk fitur penuh</li>
+                <li>• AI Chat endpoint bermasalah - akan dicoba ulang otomatis</li>
+                <li>• Coba refresh halaman atau tunggu beberapa saat</li>
+                <li>• Jika masalah berlanjut, hubungi support</li>
               </ul>
             </>
           ) : (
             <>
-              <h3 className="text-sm font-semibold text-white mb-2">
-                💡 Cara menggunakan AI Chat (Update Agustus 2025):
+              <h3 className="text-sm font-semibold text-green-300 mb-2">
+                ✅ AI Chat Ready - Cara Menggunakan:
               </h3>
-              <ul className="text-sm text-white/80 space-y-1">
-                <li>• <strong className="text-blue-300">Input Bebas:</strong> Ketik apa saja (contoh: "saya mau main bola", "basket dong")</li>
-                <li>• <strong className="text-blue-300">Auto Mapping:</strong> AI akan otomatis mengenali kategori (soccer, basketball, running)</li>
-                <li>• <strong className="text-blue-300">AI Bertanya:</strong> Jika info kurang lengkap, AI akan bertanya kategori atau lokasi</li>
-                <li>• <strong className="text-blue-300">Rekomendasi:</strong> Setelah lengkap, AI akan memberikan rekomendasi event</li>
+              <ul className="text-sm text-green-200 space-y-1">
+                <li>• <strong className="text-green-100">Ketik Natural:</strong> "Saya mau main bola di Jakarta"</li>
+                <li>• <strong className="text-green-100">Auto Recognition:</strong> AI akan mengenali olahraga dan lokasi</li>
+                <li>• <strong className="text-green-100">Smart Questions:</strong> AI akan bertanya jika info kurang lengkap</li>
+                <li>• <strong className="text-green-100">Personalized Recommendations:</strong> Dapatkan saran event terbaik</li>
+                <li>• <strong className="text-green-100">Multi-Language:</strong> Bahasa Indonesia dan Inggris didukung</li>
               </ul>
             </>
           )}

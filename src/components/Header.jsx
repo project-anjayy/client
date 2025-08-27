@@ -21,6 +21,8 @@ const Header = () => {
     { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
     { path: '/browse-events', label: 'Browse Events', icon: '⚽' },
     { path: '/my-events', label: 'My Events', icon: '📅' },
+    { path: '/create-event', label: 'Create Event', icon: '➕' },
+    { path: '/manage-events', label: 'Manage Events', icon: '⚙️' },
     { path: '/ai-chat', label: 'AI Chat', icon: '🤖' },
   ];
 

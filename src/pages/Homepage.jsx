@@ -203,6 +203,19 @@ function Homepage() {
                   </svg>
                 </span>
               </button>
+              
+              <button 
+                onClick={() => navigate('/register')}
+                className="login-btn w-full bg-white/10 border border-white/20 text-white py-4 rounded-2xl text-lg font-bold hover:bg-white/20 transition-all duration-300"
+              >
+                <span className="login-btn-content flex items-center justify-center">
+                  Create Account
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                </span>
+              </button>
+              
               <p className="text-white/60 text-sm">
                 Join thousands of athletes already using SportHub
               </p>

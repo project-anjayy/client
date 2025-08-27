@@ -13,7 +13,7 @@ class SocketService {
 
     const token = localStorage.getItem('token');
     
-    this.socket = io('https://67fe04f416ef.ngrok-free.app', {
+    this.socket = io('http://localhost:3001', {
       auth: {
         token
       },
