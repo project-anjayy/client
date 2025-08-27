@@ -179,7 +179,10 @@ function Dashboard() {
 
             {/* Quick Actions */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <button className="dashboard-btn dashboard-card bg-blue-600/20 border border-blue-500/30 rounded-2xl p-6 text-center hover:bg-blue-600/30 transition-all duration-300">
+              <button 
+                onClick={() => navigate('/browse-events')}
+                className="dashboard-btn dashboard-card bg-blue-600/20 border border-blue-500/30 rounded-2xl p-6 text-center hover:bg-blue-600/30 transition-all duration-300"
+              >
                 <div className="dashboard-btn-content">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                     <span className="text-2xl">⚽</span>
@@ -189,7 +192,10 @@ function Dashboard() {
                 </div>
               </button>
               
-              <button className="dashboard-btn dashboard-card bg-green-600/20 border border-green-500/30 rounded-2xl p-6 text-center hover:bg-green-600/30 transition-all duration-300">
+              <button 
+                onClick={() => navigate('/my-events')}
+                className="dashboard-btn dashboard-card bg-green-600/20 border border-green-500/30 rounded-2xl p-6 text-center hover:bg-green-600/30 transition-all duration-300"
+              >
                 <div className="dashboard-btn-content">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                     <span className="text-2xl">📅</span>
