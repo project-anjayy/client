@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import http from '../libraries/http';
@@ -8,6 +8,7 @@ import { socketService } from '../services/socket';
 function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [event, setEvent] = useState(null);
   const [feedback, setFeedback] = useState([]);
@@ -17,6 +18,10 @@ function EventDetail() {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  // Check if user came from AI Chat
+  const fromAiChat = location.state?.fromAiChat;
+  const chatHistory = location.state?.chatHistory;
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -78,23 +83,16 @@ function EventDetail() {
 
   const checkIfJoined = async () => {
     try {
-      // Try to get from server first
-      try {
-        const response = await http.get('/api/events/my-events');
-        if (response.data.status === 'success') {
-          const joinedEventIds = response.data.data.map(event => event.id);
-          setIsJoined(joinedEventIds.includes(parseInt(id)));
-          return;
-        }
-      } catch (err) {
-        console.log('Using localStorage fallback for joined status check');
+      // Get user's joined events from server
+      const response = await http.get('/api/events/my-events');
+      if (response.data.status === 'success') {
+        const joinedEventIds = response.data.data.map(event => event.id);
+        setIsJoined(joinedEventIds.includes(parseInt(id)));
       }
-
-      // Fallback: check localStorage
-      const localJoinedEvents = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-      setIsJoined(localJoinedEvents.includes(parseInt(id)));
     } catch (err) {
       console.error('Error checking joined status:', err);
+      // If error, assume not joined
+      setIsJoined(false);
     }
   };
 
@@ -105,15 +103,10 @@ function EventDetail() {
       if (response.data.status === 'success') {
         setIsJoined(true);
         
-        // Update localStorage
-        const currentJoined = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        if (!currentJoined.includes(parseInt(id))) {
-          currentJoined.push(parseInt(id));
-          localStorage.setItem('joinedEvents', JSON.stringify(currentJoined));
-        }
-        
         socketService.joinEvent(parseInt(id), user.id);
-        setEvent(prev => ({ ...prev, available_slots: prev.available_slots - 1 }));
+        
+        // Don't do optimistic update - let socket handle it
+        // setEvent(prev => ({ ...prev, available_slots: prev.available_slots - 1 }));
       }
     } catch (err) {
       console.error('Error joining event:', err);
@@ -128,13 +121,10 @@ function EventDetail() {
       if (response.data.status === 'success') {
         setIsJoined(false);
         
-        // Update localStorage
-        const currentJoined = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        const updatedJoined = currentJoined.filter(eventId => eventId !== parseInt(id));
-        localStorage.setItem('joinedEvents', JSON.stringify(updatedJoined));
-        
         socketService.leaveEvent(parseInt(id), user.id);
-        setEvent(prev => ({ ...prev, available_slots: prev.available_slots + 1 }));
+        
+        // Don't do optimistic update - let socket handle it
+        // setEvent(prev => ({ ...prev, available_slots: prev.available_slots + 1 }));
       }
     } catch (err) {
       console.error('Error leaving event:', err);
@@ -245,6 +235,22 @@ function EventDetail() {
   const isCreator = user?.id === event?.created_by;
   const isPastEvent = new Date(event?.time) < new Date();
 
+  // Handle back navigation
+  const handleBackNavigation = () => {
+    if (fromAiChat) {
+      // Navigate back to AI Chat with restored history
+      navigate('/ai-chat', {
+        state: { 
+          fromEventDetail: true,
+          restoreHistory: chatHistory 
+        }
+      });
+    } else {
+      // Regular back navigation
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}}>
       <Header />
@@ -253,13 +259,22 @@ function EventDetail() {
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
           <button
-            onClick={() => navigate(-1)}
-            className="flex items-center text-white/70 hover:text-white mb-6 transition-colors"
+            onClick={handleBackNavigation}
+            className="flex items-center text-white/70 hover:text-white mb-6 transition-colors group"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 mr-2 group-hover:transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back
+            {fromAiChat ? (
+              <span>
+                ← Kembali ke AI Chat
+                <span className="ml-2 px-2 py-1 bg-blue-500/20 border border-blue-500/30 rounded text-xs text-blue-300">
+                  🤖 AI Recommendation
+                </span>
+              </span>
+            ) : (
+              'Back'
+            )}
           </button>
 
           {/* Event Details Card */}

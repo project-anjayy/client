@@ -2,11 +2,10 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const http = axios.create({
-  baseURL: 'https://67fe04f416ef.ngrok-free.app',
+  baseURL: 'http://localhost:3001',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true'
+    'Content-Type': 'application/json'
   }
 });
 

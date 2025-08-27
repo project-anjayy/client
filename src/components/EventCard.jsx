@@ -5,40 +5,85 @@ const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = fal
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState('');
   const [isExpired, setIsExpired] = useState(false);
+  const [eventStatus, setEventStatus] = useState('upcoming'); // upcoming, ongoing, completed
 
-  // Calculate time until event
+  // Calculate event status and time
   useEffect(() => {
-    if (!showCountdown || !event.time) return;
-
-    const updateCountdown = () => {
+    const updateEventStatus = () => {
       const eventTime = new Date(event.time);
       const now = new Date();
-      const difference = eventTime.getTime() - now.getTime();
+      const eventDuration = (event.duration || 90) * 60 * 1000; // Convert minutes to milliseconds
+      const eventEndTime = new Date(eventTime.getTime() + eventDuration);
+      
+      const timeDifference = eventTime.getTime() - now.getTime();
+      const timeToEnd = eventEndTime.getTime() - now.getTime();
 
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (days > 0) {
-          setTimeLeft(`${days}d ${hours}h ${minutes}m`);
-        } else if (hours > 0) {
-          setTimeLeft(`${hours}h ${minutes}m`);
-        } else {
-          setTimeLeft(`${minutes}m`);
-        }
+      // Determine event status
+      if (now < eventTime) {
+        setEventStatus('upcoming');
         setIsExpired(false);
-      } else {
-        setTimeLeft('Event Started');
+      } else if (now >= eventTime && now < eventEndTime) {
+        setEventStatus('ongoing');
         setIsExpired(true);
+      } else {
+        setEventStatus('completed');
+        setIsExpired(true);
+      }
+
+      // Calculate time display
+      if (showCountdown && event.time) {
+        if (timeDifference > 0) {
+          const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+
+          if (days > 0) {
+            setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+          } else if (hours > 0) {
+            setTimeLeft(`${hours}h ${minutes}m`);
+          } else {
+            setTimeLeft(`${minutes}m`);
+          }
+        } else if (timeToEnd > 0) {
+          const hoursLeft = Math.floor(timeToEnd / (1000 * 60 * 60));
+          const minutesLeft = Math.floor((timeToEnd % (1000 * 60 * 60)) / (1000 * 60));
+          setTimeLeft(`${hoursLeft}h ${minutesLeft}m remaining`);
+        } else {
+          setTimeLeft('Event Completed');
+        }
       }
     };
 
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 60000); // Update every minute
+    updateEventStatus();
+    const interval = setInterval(updateEventStatus, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, [event.time, showCountdown]);
+  }, [event.time, event.duration, showCountdown]);
+
+  const getStatusBadge = () => {
+    switch (eventStatus) {
+      case 'upcoming':
+        return (
+          <div className="bg-blue-500/20 border border-blue-500/30 px-2 py-1 rounded-lg">
+            <span className="text-blue-300 text-xs font-medium">Upcoming</span>
+          </div>
+        );
+      case 'ongoing':
+        return (
+          <div className="bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg">
+            <span className="text-green-300 text-xs font-medium">Ongoing</span>
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="bg-gray-500/20 border border-gray-500/30 px-2 py-1 rounded-lg">
+            <span className="text-gray-300 text-xs font-medium">Completed</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   const getCategoryIcon = (category) => {
     switch (category?.toLowerCase()) {
@@ -79,35 +124,51 @@ const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = fal
 
   const isFull = event.available_slots === 0;
   const isCreator = user?.id === event.created_by;
+  const isCompleted = eventStatus === 'completed';
+  const cannotJoin = isFull || isCreator || isCompleted;
+  const cannotLeave = isCreator || isCompleted;
   const slotsPercentage = (event.available_slots / event.total_slots) * 100;
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all duration-300 hover:transform hover:-translate-y-1">
+    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/20 hover:border-white/40 transition-all duration-300 hover:transform hover:-translate-y-1">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center">
-          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(event.category)} flex items-center justify-center text-2xl mr-3`}>
+        <div className="flex items-center min-w-0 flex-1">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(event.category)} flex items-center justify-center text-xl sm:text-2xl mr-3 flex-shrink-0`}>
             {getCategoryIcon(event.category)}
           </div>
-          <div>
-            <h3 className="text-white font-bold text-lg truncate">{event.title}</h3>
-            <p className="text-white/60 text-sm capitalize">{event.category}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-white font-bold text-base sm:text-lg truncate">{event.title}</h3>
+            <p className="text-white/60 text-xs sm:text-sm capitalize">{event.category}</p>
           </div>
         </div>
         
-        {isCreator && (
-          <div className="bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-lg">
-            <span className="text-yellow-300 text-xs font-medium">Creator</span>
-          </div>
-        )}
+        <div className="flex flex-col gap-2 ml-2">
+          {isCreator && (
+            <div className="bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-lg">
+              <span className="text-yellow-300 text-xs font-medium">Creator</span>
+            </div>
+          )}
+          {getStatusBadge()}
+        </div>
       </div>
 
       {/* Countdown (if enabled) */}
       {showCountdown && (
-        <div className={`mb-4 p-3 rounded-xl ${isExpired ? 'bg-red-500/20 border border-red-500/30' : 'bg-blue-500/20 border border-blue-500/30'}`}>
+        <div className={`mb-4 p-3 rounded-xl ${
+          eventStatus === 'completed' ? 'bg-gray-500/20 border border-gray-500/30' :
+          eventStatus === 'ongoing' ? 'bg-green-500/20 border border-green-500/30' :
+          'bg-blue-500/20 border border-blue-500/30'
+        }`}>
           <div className="flex items-center justify-center">
-            <span className={`text-sm font-medium ${isExpired ? 'text-red-300' : 'text-blue-300'}`}>
-              {isExpired ? '⏰ Event Started' : `⏱️ ${timeLeft} left`}
+            <span className={`text-sm font-medium ${
+              eventStatus === 'completed' ? 'text-gray-300' :
+              eventStatus === 'ongoing' ? 'text-green-300' :
+              'text-blue-300'
+            }`}>
+              {eventStatus === 'completed' ? '🏁 Event Completed' :
+               eventStatus === 'ongoing' ? `🔴 Live: ${timeLeft}` :
+               `⏱️ ${timeLeft} to start`}
             </span>
           </div>
         </div>
@@ -154,30 +215,33 @@ const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = fal
       </div>
 
       {/* Action Button */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         {isJoined ? (
           <button
             onClick={onLeave}
-            disabled={isCreator}
+            disabled={cannotLeave}
             className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ${
-              isCreator 
+              cannotLeave
                 ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed' 
                 : 'bg-red-600/80 text-white hover:bg-red-700 border border-red-500/50 hover:border-red-400'
             }`}
           >
-            {isCreator ? 'Your Event' : 'Leave Event'}
+            {isCompleted ? 'Event Completed' : 
+             isCreator ? 'Your Event' : 'Leave Event'}
           </button>
         ) : (
           <button
             onClick={onJoin}
-            disabled={isFull || isCreator}
+            disabled={cannotJoin}
             className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ${
-              isFull || isCreator
+              cannotJoin
                 ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 border border-blue-500/50 hover:border-blue-400'
             }`}
           >
-            {isFull ? 'Event Full' : isCreator ? 'Your Event' : 'Join Event'}
+            {isCompleted ? 'Event Completed' :
+             isFull ? 'Event Full' : 
+             isCreator ? 'Your Event' : 'Join Event'}
           </button>
         )}
         

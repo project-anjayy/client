@@ -67,26 +67,16 @@ function BrowseEvents() {
 
   const fetchUserEvents = async () => {
     try {
-      // Try to get user's joined events from server
-      try {
-        const response = await http.get('/api/events/my-events');
-        if (response.data.status === 'success') {
-          const userEventIds = new Set(response.data.data.map(event => event.id));
-          setJoinedEvents(userEventIds);
-          
-          // Also update localStorage for consistency
-          localStorage.setItem('joinedEvents', JSON.stringify([...userEventIds]));
-          return;
-        }
-      } catch (err) {
-        console.log('Using localStorage fallback for joined events tracking');
+      // Get user's joined events from server
+      const response = await http.get('/api/events/my-events');
+      if (response.data.status === 'success') {
+        const userEventIds = new Set(response.data.data.map(event => event.id));
+        setJoinedEvents(userEventIds);
       }
-
-      // Fallback: get from localStorage
-      const localJoinedEvents = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-      setJoinedEvents(new Set(localJoinedEvents));
     } catch (err) {
       console.error('Error fetching user events:', err);
+      // If error, assume no joined events
+      setJoinedEvents(new Set());
     }
   };
 
@@ -97,26 +87,21 @@ function BrowseEvents() {
       if (response.data.status === 'success') {
         setJoinedEvents(prev => new Set([...prev, eventId]));
         
-        // Update localStorage
-        const currentJoined = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        if (!currentJoined.includes(eventId)) {
-          currentJoined.push(eventId);
-          localStorage.setItem('joinedEvents', JSON.stringify(currentJoined));
-        }
-        
         // Emit socket event for real-time updates
         socketService.joinEvent(eventId, user.id);
         
-        // Update local event state optimistically
-        setEvents(prev => prev.map(event => 
-          event.id === eventId 
-            ? { ...event, available_slots: event.available_slots - 1 }
-            : event
-        ));
+        // Don't do optimistic update - let socket handle it
+        // The server will emit slotsUpdated with the correct value
       }
     } catch (err) {
       console.error('Error joining event:', err);
-      setError('Failed to join event');
+      
+      // Handle specific error messages from server
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Failed to join event');
+      }
     }
   };
 
@@ -131,24 +116,21 @@ function BrowseEvents() {
           return newSet;
         });
         
-        // Update localStorage
-        const currentJoined = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        const updatedJoined = currentJoined.filter(id => id !== eventId);
-        localStorage.setItem('joinedEvents', JSON.stringify(updatedJoined));
-        
         // Emit socket event for real-time updates
         socketService.leaveEvent(eventId, user.id);
         
-        // Update local event state optimistically
-        setEvents(prev => prev.map(event => 
-          event.id === eventId 
-            ? { ...event, available_slots: event.available_slots + 1 }
-            : event
-        ));
+        // Don't do optimistic update - let socket handle it
+        // The server will emit slotsUpdated with the correct value
       }
     } catch (err) {
       console.error('Error leaving event:', err);
-      setError('Failed to leave event');
+      
+      // Handle specific error messages from server
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Failed to leave event');
+      }
     }
   };
 
@@ -211,21 +193,21 @@ function BrowseEvents() {
     <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}}>
       <Header />
       
-      <div className="container mx-auto px-4" style={{paddingTop: '100px'}}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8" style={{paddingTop: '100px'}}>
         <div className="max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Browse <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Events</span>
             </h1>
-            <p className="text-white/80 text-lg">
+            <p className="text-white/80 text-base sm:text-lg">
               Discover exciting sports events and connect with fellow athletes
             </p>
           </div>
 
           {/* Search and Filter Bar */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 border border-white/20">
-            <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-6 mb-8 border border-white/20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Search Input */}
               <div className="relative">
                 <input
@@ -247,9 +229,20 @@ function BrowseEvents() {
                 className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all" className="bg-slate-800">All Categories</option>
-                <option value="soccer" className="bg-slate-800">Soccer ⚽</option>
-                <option value="basketball" className="bg-slate-800">Basketball 🏀</option>
-                <option value="running" className="bg-slate-800">Running 🏃</option>
+                <option value="Soccer" className="bg-slate-800">Soccer ⚽</option>
+                <option value="Basketball" className="bg-slate-800">Basketball 🏀</option>
+                <option value="Tennis" className="bg-slate-800">Tennis 🎾</option>
+                <option value="Volleyball" className="bg-slate-800">Volleyball 🏐</option>
+                <option value="Badminton" className="bg-slate-800">Badminton 🏸</option>
+                <option value="Swimming" className="bg-slate-800">Swimming 🏊</option>
+                <option value="Running" className="bg-slate-800">Running 🏃</option>
+                <option value="Cycling" className="bg-slate-800">Cycling 🚴</option>
+                <option value="Boxing" className="bg-slate-800">Boxing 🥊</option>
+                <option value="Martial Arts" className="bg-slate-800">Martial Arts 🥋</option>
+                <option value="Gym/Fitness" className="bg-slate-800">Gym/Fitness 💪</option>
+                <option value="Yoga" className="bg-slate-800">Yoga 🧘</option>
+                <option value="Dance" className="bg-slate-800">Dance 💃</option>
+                <option value="Other" className="bg-slate-800">Other 🎯</option>
               </select>
             </div>
           </div>
@@ -275,7 +268,7 @@ function BrowseEvents() {
               <p>Try adjusting your search criteria or check back later for new events.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {filteredEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -291,7 +284,7 @@ function BrowseEvents() {
 
           {/* Stats */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-white">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-white">
               <div>
                 <div className="text-2xl font-bold text-blue-400">{events.length}</div>
                 <div className="text-white/70 text-sm">Total Events</div>

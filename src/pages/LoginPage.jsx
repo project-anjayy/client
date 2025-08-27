@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import authAPI from '../services/authService';
+import { showSuccess, showError, showLoading, closeLoading } from '../utils/sweetAlert';
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, user, isAuthenticated } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -13,20 +15,35 @@ function LoginPage() {
     password: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (isAuthenticated() && user) {
+      console.log('User already authenticated, redirecting to dashboard...');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  // Check for success message from registration
+  useEffect(() => {
+    if (location.state?.message) {
+      showSuccess('Registration Successful!', location.state.message);
+      if (location.state.email) {
+        setFormData(prev => ({ ...prev, email: location.state.email }));
+      }
+    }
+  }, [location.state]);
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const payload = isLogin 
@@ -35,51 +52,82 @@ function LoginPage() {
 
       console.log('Sending request with payload:', payload);
       
-      const data = isLogin 
-        ? await authAPI.login(payload)
-        : await authAPI.register(payload);
+      if (isLogin) {
+        // LOGIN LOGIC
+        showLoading('Signing you in...');
         
-      console.log('API Response:', data);
+        const data = await authAPI.login(payload);
+        console.log('Login API Response:', data);
 
-      // Check if the response indicates success
-      if (data && data.status === 'success' && data.data && data.data.token) {
-        if (isLogin) {
+        closeLoading();
+
+        if (data && data.status === 'success' && data.data && data.data.token) {
           console.log('Login successful, user data:', data.data.user);
           console.log('Token received:', data.data.token);
-          // Store token and user data (this will also fetch profile)
+          
+          // Store token and user data
           await login(data.data.user, data.data.token);
+          
+          // Show success message
+          await showSuccess('Welcome back!', `Hello ${data.data.user.name || 'User'}!`);
+          
           // Navigate to dashboard
           navigate('/dashboard');
         } else {
-          // Registration successful, switch to login
-          setIsLogin(true);
-          setFormData({ name: '', email: '', password: '' });
-          setError('Registration successful! Please login.');
+          // Backend returned error response or invalid format
+          console.error('Login failed - invalid response:', data);
+          showError('Login Failed', data?.message || 'Invalid email or password');
         }
       } else {
-        // Backend returned error response or invalid format
-        console.error('Auth failed - invalid response:', data);
-        setError(data?.message || 'Invalid email or password');
+        // REGISTER LOGIC
+        showLoading('Creating your account...');
+        
+        const data = await authAPI.register(payload);
+        console.log('Register API Response:', data);
+
+        closeLoading();
+
+        if (data && data.status === 'success') {
+          // Registration successful
+          await showSuccess('Account Created!', 'Please login with your new credentials.');
+          
+          // Switch to login mode
+          setIsLogin(true);
+          setFormData({ name: '', email: formData.email, password: '' });
+        } else {
+          // Backend returned error response or invalid format
+          console.error('Registration failed - invalid response:', data);
+          showError('Registration Failed', data?.message || 'Registration failed');
+        }
       }
     } catch (err) {
       console.error('Auth error:', err);
+      closeLoading();
       
       // Handle different types of errors
+      let errorTitle = isLogin ? 'Login Failed' : 'Registration Failed';
+      let errorMessage = '';
+      
       if (err.response?.status === 400) {
-        // Bad request - likely invalid credentials
-        setError(err.response.data?.message || 'Invalid email or password');
+        // Bad request - likely validation error
+        errorMessage = err.response.data?.message || (isLogin ? 'Invalid email or password' : 'Invalid registration data');
       } else if (err.response?.status === 401) {
-        // Unauthorized - invalid credentials
-        setError('Invalid email or password');
+        // Unauthorized - invalid credentials (only for login)
+        errorMessage = 'Invalid email or password';
+      } else if (err.response?.status === 409) {
+        // Conflict - email already exists (only for register)
+        errorMessage = 'Email already exists. Please use a different email.';
       } else if (err.response?.data?.message) {
         // Other backend errors
-        setError(err.response.data.message);
+        errorMessage = err.response.data.message;
       } else if (err.message) {
         // Network or other errors
-        setError(err.message === 'Network error' ? 'Network error. Please check your connection.' : err.message);
+        errorMessage = err.message === 'Network error' ? 'Network error. Please check your connection.' : err.message;
       } else {
-        setError('An unexpected error occurred. Please try again.');
+        errorMessage = 'An unexpected error occurred. Please try again.';
       }
+
+      showError(errorTitle, errorMessage);
     }
 
     setLoading(false);
@@ -179,17 +227,6 @@ function LoginPage() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className={`mb-4 p-4 rounded-xl text-sm ${
-              error.includes('successful') 
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-            }`}>
-              {error}
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
@@ -265,18 +302,31 @@ function LoginPage() {
             <p className="text-white/70 mb-4">
               {isLogin ? "Don't have an account?" : "Already have an account?"}
             </p>
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setFormData({ name: '', email: '', password: '' });
-                setError('');
-              }}
-              className="auth-btn bg-white/10 text-white px-6 py-3 rounded-xl font-medium hover:bg-white/20 transition-all duration-300"
-            >
-              <span className="auth-btn-content">
-                {isLogin ? 'Sign Up' : 'Login Instead'}
-              </span>
-            </button>
+            
+            {isLogin ? (
+              // Show register option when in login mode
+              <button
+                onClick={() => navigate('/register')}
+                className="auth-btn bg-gradient-to-r from-green-600/80 to-blue-600/80 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-300 block w-full"
+              >
+                <span className="auth-btn-content">
+                  Create New Account
+                </span>
+              </button>
+            ) : (
+              // Show login option when in register mode
+              <button
+                onClick={() => {
+                  setIsLogin(true);
+                  setFormData({ name: '', email: '', password: '' });
+                }}
+                className="auth-btn bg-white/10 text-white px-6 py-3 rounded-xl font-medium hover:bg-white/20 transition-all duration-300 block w-full"
+              >
+                <span className="auth-btn-content">
+                  Login Instead
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -1,0 +1,155 @@
+/* SweetAlert2 Custom Dark Theme */
+.swal-dark-popup {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+.swal-dark-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+}
+
+.swal-dark-content {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 1rem !important;
+}
+
+.swal-dark-confirm {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
+}
+
+.swal-dark-confirm:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4) !important;
+}
+
+.swal-dark-cancel {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #ffffff !important;
+  transition: all 0.3s ease !important;
+}
+
+.swal-dark-cancel:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-1px) !important;
+}
+
+.swal-dark-deny {
+  background: linear-gradient(135deg, #ef4444, #f97316) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;
+}
+
+.swal-dark-deny:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Success icon styling */
+.swal2-success-ring {
+  border-color: #10b981 !important;
+}
+
+.swal2-success-line {
+  background-color: #10b981 !important;
+}
+
+/* Error icon styling */
+.swal2-error-icon {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+/* Warning icon styling */
+.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+/* Info icon styling */
+.swal2-info {
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+
+/* Question icon styling */
+.swal2-question {
+  border-color: #8b5cf6 !important;
+  color: #8b5cf6 !important;
+}
+
+/* Timer progress bar */
+.swal2-timer-progress-bar {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+}
+
+/* Toast styling */
+.swal2-toast.swal2-show {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 16px !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Loading spinner */
+.swal2-loader {
+  border-color: #3b82f6 transparent #3b82f6 transparent !important;
+}
+
+/* Input fields */
+.swal2-input {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  padding: 12px 16px !important;
+}
+
+.swal2-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+.swal2-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .swal-dark-popup {
+    margin: 16px !important;
+    border-radius: 20px !important;
+  }
+  
+  .swal-dark-title {
+    font-size: 1.25rem !important;
+  }
+  
+  .swal-dark-content {
+    font-size: 0.875rem !important;
+  }
+}

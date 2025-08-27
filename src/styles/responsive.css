@@ -1,0 +1,264 @@
+/* Responsive utility classes for SportHub */
+
+/* Ensure all containers are responsive */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Responsive breakpoints */
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+}
+
+/* Mobile-first responsive text */
+.responsive-text-lg {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+.responsive-text-xl {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+
+.responsive-text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-2xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+}
+
+.responsive-text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-3xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
+.responsive-text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-text-4xl {
+    font-size: 3rem;
+    line-height: 1;
+  }
+}
+
+/* Responsive padding */
+.responsive-p-4 {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-p-4 {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-p-4 {
+    padding: 2rem;
+  }
+}
+
+/* Responsive margins */
+.responsive-mb-8 {
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-mb-8 {
+    margin-bottom: 2rem;
+  }
+}
+
+/* Responsive grid gap */
+.responsive-gap-4 {
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-gap-4 {
+    gap: 1.5rem;
+  }
+}
+
+/* Ensure images are responsive */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Responsive tables */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive form elements */
+.form-input-responsive {
+  width: 100%;
+  font-size: 1rem;
+}
+
+@media (max-width: 640px) {
+  .form-input-responsive {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Responsive buttons */
+.btn-responsive {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .btn-responsive {
+    padding: 0.875rem 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+/* Hide/show elements based on screen size */
+.hidden-mobile {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .hidden-mobile {
+    display: block;
+  }
+}
+
+.hidden-desktop {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .hidden-desktop {
+    display: none;
+  }
+}
+
+/* Responsive navigation */
+.nav-responsive {
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .nav-responsive {
+    flex-direction: row;
+  }
+}
+
+/* Responsive card spacing */
+.card-responsive {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card-responsive {
+    margin-bottom: 0;
+  }
+}
+
+/* Touch-friendly interactive elements */
+@media (hover: none) and (pointer: coarse) {
+  .touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal scroll */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Responsive modal/popup */
+.modal-responsive {
+  width: 95vw;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .modal-responsive {
+    width: 80vw;
+  }
+}
+
+/* Responsive sidebar */
+.sidebar-responsive {
+  width: 100%;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  .sidebar-responsive {
+    width: 250px;
+    height: 100vh;
+  }
+}

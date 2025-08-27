@@ -48,42 +48,27 @@ function MyEvents() {
     try {
       setLoading(true);
       
-      // Approach 1: Try to get user's joined events from a dedicated endpoint
-      try {
-        const myEventsResponse = await http.get('/api/events/my-events');
-        if (myEventsResponse.data.status === 'success') {
-          setMyEvents(myEventsResponse.data.data);
-          return;
-        }
-      } catch (myEventsError) {
-        console.log('My events endpoint not available, trying alternative approach...');
-      }
-
-      // Approach 2: Get all events and check which ones user has joined
-      const [allEventsResponse] = await Promise.all([
-        http.get('/api/events')
-      ]);
-
-      if (allEventsResponse.data.status === 'success') {
-        const allEvents = allEventsResponse.data.data;
+      // Get user's joined events from the server
+      const response = await http.get('/api/events/my-events');
+      
+      if (response.data.status === 'success') {
+        setMyEvents(response.data.data);
         
-        // Check which events the user has joined by trying to get RSVP status
-        // We'll use localStorage to track joined events as a fallback
-        const localJoinedEvents = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        
-        // Filter events that user has joined
-        const userJoinedEvents = allEvents.filter(event => 
-          localJoinedEvents.includes(event.id)
-        );
-        
-        setMyEvents(userJoinedEvents);
-        setJoinedEventIds(new Set(localJoinedEvents));
+        // Create a set of joined event IDs for tracking
+        const joinedIds = response.data.data.map(event => event.id);
+        setJoinedEventIds(new Set(joinedIds));
       } else {
         setError('Failed to fetch your events');
       }
     } catch (err) {
       console.error('Error fetching my events:', err);
-      setError('Failed to fetch your events. Please try again.');
+      
+      if (err.response?.status === 401) {
+        setError('Please log in again to view your events');
+        navigate('/login');
+      } else {
+        setError('Failed to fetch your events. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,11 +88,6 @@ function MyEvents() {
           newSet.delete(eventId);
           return newSet;
         });
-        
-        // Update localStorage
-        const currentJoined = JSON.parse(localStorage.getItem('joinedEvents') || '[]');
-        const updatedJoined = currentJoined.filter(id => id !== eventId);
-        localStorage.setItem('joinedEvents', JSON.stringify(updatedJoined));
         
         // Emit socket event for real-time updates
         socketService.leaveEvent(eventId, user.id);
@@ -160,14 +140,14 @@ function MyEvents() {
     <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}}>
       <Header />
       
-      <div className="container mx-auto px-4" style={{paddingTop: '100px'}}>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8" style={{paddingTop: '100px'}}>
         <div className="max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               My <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-400">Events</span>
             </h1>
-            <p className="text-white/80 text-lg">
+            <p className="text-white/80 text-base sm:text-lg">
               Manage your joined events and stay updated
             </p>
             
@@ -194,16 +174,6 @@ function MyEvents() {
             </div>
           )}
 
-          {/* Debug Info (remove in production) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-4 mb-6 text-yellow-300">
-              <h4 className="font-semibold mb-2">Debug Info:</h4>
-              <p>Total events found: {myEvents.length}</p>
-              <p>Joined Event IDs: {JSON.stringify([...joinedEventIds])}</p>
-              <p>LocalStorage: {localStorage.getItem('joinedEvents')}</p>
-            </div>
-          )}
-
           {/* Events Grid */}
           {myEvents.length === 0 ? (
             <div className="text-center text-white/60 py-12">
@@ -218,7 +188,7 @@ function MyEvents() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {myEvents.map((event) => (
                 <EventCard
                   key={event.id}
@@ -235,7 +205,7 @@ function MyEvents() {
           {/* Stats */}
           {myEvents.length > 0 && (
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-white">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-white">
                 <div>
                   <div className="text-2xl font-bold text-green-400">{myEvents.length}</div>
                   <div className="text-white/70 text-sm">Joined Events</div>
