@@ -1,24 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { socketService } from '../services/socket';
 
 const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = false }) => {
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState('');
   const [isExpired, setIsExpired] = useState(false);
   const [eventStatus, setEventStatus] = useState('upcoming'); // upcoming, ongoing, completed
+  const [socketCountdown, setSocketCountdown] = useState(null);
+
+  // Handle socket countdown updates
+  useEffect(() => {
+    if (showCountdown && event.id) {
+      // Subscribe to this event's countdown
+      socketService.subscribeToEvent(event.id);
+
+      const handleCountdownUpdate = (data) => {
+        if (data.eventId === event.id) {
+          setSocketCountdown(data);
+        }
+      };
+
+      socketService.onCountdownUpdate(handleCountdownUpdate);
+
+      return () => {
+        socketService.unsubscribeFromEvent(event.id);
+        socketService.offCountdownUpdate(handleCountdownUpdate);
+      };
+    }
+  }, [showCountdown, event.id]);
 
   // Calculate event status and time
   useEffect(() => {
     const updateEventStatus = () => {
       const eventTime = new Date(event.time);
       const now = new Date();
-      const eventDuration = (event.duration || 90) * 60 * 1000; // Convert minutes to milliseconds
-      const eventEndTime = new Date(eventTime.getTime() + eventDuration);
+      
+      // Use socket countdown data if available (this has the correct duration from server)
+      if (socketCountdown) {
+        setEventStatus(socketCountdown.status);
+        
+        if (socketCountdown.status === 'upcoming' && socketCountdown.timeToStart) {
+          const timeRemaining = socketCountdown.timeToStart;
+          const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+          if (days > 0) {
+            setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+          } else if (hours > 0) {
+            setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+          } else if (minutes > 0) {
+            setTimeLeft(`${minutes}m ${seconds}s`);
+          } else {
+            setTimeLeft(`${seconds}s`);
+          }
+          setIsExpired(false);
+        } else if (socketCountdown.status === 'ongoing' && socketCountdown.timeToEnd) {
+          const timeRemaining = socketCountdown.timeToEnd;
+          const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+          const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+          
+          setTimeLeft(`${hours}h ${minutes}m ${seconds}s remaining`);
+          setIsExpired(true);
+        } else if (socketCountdown.status === 'completed') {
+          setTimeLeft('Event Completed');
+          setIsExpired(true);
+        }
+        return;
+      }
+
+      // Fallback to local calculation only if no socket data AND event has valid duration
+      const eventDuration = event.duration; // Don't fallback to 90!
+      if (!eventDuration || eventDuration <= 0) {
+        setTimeLeft('Duration not set');
+        setEventStatus('upcoming');
+        return;
+      }
+      
+      const eventDurationMs = eventDuration * 60 * 1000;
+      const eventEndTime = new Date(eventTime.getTime() + eventDurationMs);
       
       const timeDifference = eventTime.getTime() - now.getTime();
       const timeToEnd = eventEndTime.getTime() - now.getTime();
 
-      // Determine event status
       if (now < eventTime) {
         setEventStatus('upcoming');
         setIsExpired(false);
@@ -30,7 +97,7 @@ const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = fal
         setIsExpired(true);
       }
 
-      // Calculate time display
+      // Calculate time display for fallback
       if (showCountdown && event.time) {
         if (timeDifference > 0) {
           const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
@@ -55,10 +122,10 @@ const EventCard = ({ event, isJoined, onJoin, onLeave, user, showCountdown = fal
     };
 
     updateEventStatus();
-    const interval = setInterval(updateEventStatus, 60000); // Update every minute
+    const interval = setInterval(updateEventStatus, 1000); // Update every second for smooth countdown
 
     return () => clearInterval(interval);
-  }, [event.time, event.duration, showCountdown]);
+  }, [event.time, event.duration, showCountdown, socketCountdown]);
 
   const getStatusBadge = () => {
     switch (eventStatus) {

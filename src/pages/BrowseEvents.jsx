@@ -26,6 +26,8 @@ function BrowseEvents() {
   // Initialize socket connection and fetch data
   useEffect(() => {
     if (isAuthenticated()) {
+      console.log('🔌 BrowseEvents: Initializing socket connection...');
+      
       // Connect to socket
       socketService.connect();
       
@@ -34,15 +36,19 @@ function BrowseEvents() {
       fetchUserEvents();
 
       // Socket event listeners
+      console.log('🔌 BrowseEvents: Setting up socket listeners...');
       socketService.onSlotsUpdated(handleSlotsUpdate);
       socketService.onEventUpdated(handleEventUpdate);
       socketService.onEventDeleted(handleEventDeleted);
+      socketService.onEventCreated(handleEventCreated);
 
       return () => {
+        console.log('🔌 BrowseEvents: Cleaning up socket listeners...');
         // Cleanup socket listeners
         socketService.offSlotsUpdated(handleSlotsUpdate);
         socketService.offEventUpdated(handleEventUpdate);
         socketService.offEventDeleted(handleEventDeleted);
+        socketService.offEventCreated(handleEventCreated);
       };
     }
   }, [isAuthenticated]);
@@ -162,6 +168,41 @@ function BrowseEvents() {
       return newSet;
     });
   };
+
+  const handleEventCreated = (data) => {
+    console.log('🆕 BrowseEvents: Received eventCreated event:', data);
+    const { event } = data;
+    console.log('🆕 BrowseEvents: New event data:', event);
+    console.log('🆕 BrowseEvents: Current events count before:', events.length);
+    
+    setEvents(prev => {
+      const newEvents = [event, ...prev];
+      console.log('🆕 BrowseEvents: Events count after adding:', newEvents.length);
+      return newEvents;
+    });
+    
+    console.log('🆕 BrowseEvents: Event added to list successfully');
+  };
+
+  // Debug function to test socket connection
+  useEffect(() => {
+    // Make debug functions available globally for testing
+    window.testSocket = () => {
+      console.log('🔧 Socket connection status:', socketService.socket?.connected);
+      console.log('🔧 Socket ID:', socketService.socket?.id);
+      console.log('🔧 Active listeners:', socketService.listeners);
+      
+      // Test emit
+      if (socketService.socket?.connected) {
+        socketService.socket.emit('test', { message: 'Test from BrowseEvents' });
+        console.log('🔧 Test event emitted');
+      }
+    };
+
+    return () => {
+      delete window.testSocket;
+    };
+  }, []);
 
   // Filter events based on search and category
   const filteredEvents = events.filter(event => {

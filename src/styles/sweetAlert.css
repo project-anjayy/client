@@ -1,10 +1,235 @@
 /* SweetAlert2 Custom Dark Theme */
+.swal2-popup {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 24px !important;
+}
+
 .swal-dark-popup {
   background: rgba(15, 23, 42, 0.95) !important;
   backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 24px !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Error popup specific styling */
+.swal-error-popup {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.3) !important;
+}
+
+.swal-error-title {
+  color: #fecaca !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal-error-confirm {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+.swal-error-confirm:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Success popup specific styling */
+.swal-success-popup {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.3) !important;
+}
+
+.swal-success-title {
+  color: #bbf7d0 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal-success-confirm {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
+}
+
+.swal-success-confirm:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5) !important;
+}
+
+/* Warning popup specific styling */
+.swal-warning-popup {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  box-shadow: 0 25px 50px -12px rgba(245, 158, 11, 0.3) !important;
+}
+
+.swal-warning-title {
+  color: #fef3c7 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal-warning-confirm {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+.swal-warning-confirm:hover {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5) !important;
+}
+
+/* Loading popup specific styling */
+.swal-loading-popup {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95)) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.swal-loading-title {
+  color: #dbeafe !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Custom animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fadeOutUp {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+.animate__animated {
+  animation-duration: 0.3s;
+  animation-fill-mode: both;
+}
+
+.animate__faster {
+  animation-duration: 0.2s;
+}
+
+.animate__fadeInDown {
+  animation-name: fadeInDown;
+}
+
+.animate__fadeOutUp {
+  animation-name: fadeOutUp;
+}
+
+/* Themed SweetAlert classes */
+.themed-swal-popup {
+  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+  padding: 2rem !important;
+}
+
+.themed-swal-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+}
+
+.themed-swal-content {
+  color: #e2e8f0 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Icon styling */
+.themed-swal-popup .swal2-icon {
+  border: none !important;
+  margin: 0 auto 1.5rem !important;
+}
+
+.themed-swal-popup .swal2-icon.swal2-error {
+  color: #ef4444 !important;
+}
+
+.themed-swal-popup .swal2-icon.swal2-success {
+  color: #10b981 !important;
+}
+
+.themed-swal-popup .swal2-icon.swal2-warning {
+  color: #f59e0b !important;
+}
+
+.themed-swal-popup .swal2-icon.swal2-info {
+  color: #3b82f6 !important;
+}
+
+.themed-swal-button {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+.themed-swal-button:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Warning button styling */
+.swal-warning-confirm {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+.swal-warning-confirm:hover {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5) !important;
+}
+
+/* Success button styling */
+.swal-success-confirm {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
+}
+
+.swal-success-confirm:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5) !important;
 }
 
 .swal-dark-title {

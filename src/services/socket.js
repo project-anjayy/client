@@ -22,15 +22,15 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected:', this.socket.id);
+      // Connected
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      // Disconnected
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      // Connection error
     });
 
     return this.socket;
@@ -90,6 +90,16 @@ class SocketService {
     this.emit('updateEvent', { eventId, payload });
   }
 
+  // Subscribe to event countdown
+  subscribeToEvent(eventId) {
+    this.emit('subscribeToEvent', { eventId });
+  }
+
+  // Unsubscribe from event countdown
+  unsubscribeFromEvent(eventId) {
+    this.emit('unsubscribeFromEvent', { eventId });
+  }
+
   // Listen for server events
   onSlotsUpdated(callback) {
     this.on('slotsUpdated', callback);
@@ -101,6 +111,10 @@ class SocketService {
 
   onEventDeleted(callback) {
     this.on('eventDeleted', callback);
+  }
+
+  onEventCreated(callback) {
+    this.on('eventCreated', callback);
   }
 
   onCountdownUpdate(callback) {
@@ -118,6 +132,10 @@ class SocketService {
 
   offEventDeleted(callback) {
     this.off('eventDeleted', callback);
+  }
+
+  offEventCreated(callback) {
+    this.off('eventCreated', callback);
   }
 
   offCountdownUpdate(callback) {

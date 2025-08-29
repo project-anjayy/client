@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import authAPI from '../services/authService';
-import { showSuccess, showError, showLoading, closeLoading } from '../utils/sweetAlert';
+import { showSuccess, showError, showLoading, closeLoading, simpleShowError } from '../utils/sweetAlert';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -18,11 +18,16 @@ function LoginPage() {
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
-    if (isAuthenticated() && user) {
+    // Add additional check for loading state and prevent redirect during login process
+    // Also prevent redirect if there's been a login error
+    if (!loading && isAuthenticated() && user && user.id) {
       console.log('User already authenticated, redirecting to dashboard...');
-      navigate('/dashboard', { replace: true });
+      // Add a small delay to ensure any error alerts are shown first
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, loading]);
 
   // Check for success message from registration
   useEffect(() => {
@@ -43,6 +48,33 @@ function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Tambahan untuk memastikan tidak ada event bubbling
+    
+    console.log('=== FORM SUBMITTED ===');
+    
+    // Client-side validation dengan SweetAlert yang dikustomisasi
+    if (!isLogin && !formData.name.trim()) {
+      await simpleShowError('Validation Error', 'Full name is required');
+      return;
+    }
+    
+    if (!formData.email.trim()) {
+      await simpleShowError('Validation Error', 'Email address is required');
+      return;
+    }
+    
+    if (!formData.password.trim()) {
+      await simpleShowError('Validation Error', 'Password is required');
+      return;
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      await simpleShowError('Validation Error', 'Please enter a valid email address');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -54,6 +86,7 @@ function LoginPage() {
       
       if (isLogin) {
         // LOGIN LOGIC
+        console.log('=== Starting LOGIN process ===');
         showLoading('Signing you in...');
         
         const data = await authAPI.login(payload);
@@ -76,7 +109,25 @@ function LoginPage() {
         } else {
           // Backend returned error response or invalid format
           console.error('Login failed - invalid response:', data);
-          showError('Login Failed', data?.message || 'Invalid email or password');
+          console.log('=== Showing ERROR alert for invalid response ===');
+          
+          // PENTING: Reset loading state dan pastikan tidak ada redirect
+          setLoading(false);
+          
+          // Prevent any potential useEffect redirect by ensuring we stay on login page
+          // Add delay and ensure loading is closed
+          setTimeout(async () => {
+            try {
+              await simpleShowError('Login Failed', data?.message || 'Invalid email or password');
+              console.log('=== ERROR alert for invalid response shown ===');
+            } catch (alertError) {
+              console.error('=== ERROR showing invalid response alert ===', alertError);
+              alert(`Login Failed: ${data?.message || 'Invalid email or password'}`);
+            }
+          }, 200);
+          
+          // Return early to prevent any further execution
+          return;
         }
       } else {
         // REGISTER LOGIC
@@ -97,16 +148,41 @@ function LoginPage() {
         } else {
           // Backend returned error response or invalid format
           console.error('Registration failed - invalid response:', data);
-          showError('Registration Failed', data?.message || 'Registration failed');
+          
+          // Reset loading state
+          setLoading(false);
+          
+          // Add delay and ensure loading is closed
+          setTimeout(async () => {
+            try {
+              await simpleShowError('Registration Failed', data?.message || 'Registration failed');
+              console.log('=== Registration ERROR alert shown ===');
+            } catch (alertError) {
+              console.error('=== ERROR showing registration alert ===', alertError);
+              alert(`Registration Failed: ${data?.message || 'Registration failed'}`);
+            }
+          }, 200);
         }
       }
     } catch (err) {
-      console.error('Auth error:', err);
-      closeLoading();
+      console.error('=== CATCH BLOCK - Auth error ===', err);
+      
+      // PENTING: Close loading DULU sebelum show error
+      try {
+        closeLoading();
+      } catch (closeError) {
+        console.error('Error closing loading:', closeError);
+      }
+      
+      // PENTING: Reset loading state immediately
+      setLoading(false);
       
       // Handle different types of errors
       let errorTitle = isLogin ? 'Login Failed' : 'Registration Failed';
       let errorMessage = '';
+      
+      console.log('Error response status:', err.response?.status);
+      console.log('Error response data:', err.response?.data);
       
       if (err.response?.status === 400) {
         // Bad request - likely validation error
@@ -127,10 +203,31 @@ function LoginPage() {
         errorMessage = 'An unexpected error occurred. Please try again.';
       }
 
-      showError(errorTitle, errorMessage);
+      console.log('=== About to show ERROR alert ===');
+      console.log('Error Title:', errorTitle);
+      console.log('Error Message:', errorMessage);
+      
+      // Add delay to ensure loading is closed and state is stable
+      setTimeout(async () => {
+        try {
+          await simpleShowError(errorTitle, errorMessage);
+          console.log('=== Simple ERROR alert shown successfully ===');
+        } catch (alertError) {
+          console.error('=== ERROR showing simple alert ===', alertError);
+          // Final fallback
+          alert(`${errorTitle}: ${errorMessage}`);
+        }
+      }, 200);
+      
+      // Return early to prevent any further execution that might cause reload
+      return;
     }
 
-    setLoading(false);
+    // NOTE: This should only be reached for successful operations
+    // Pastikan loading state di-reset hanya untuk success case
+    if (!loading) {
+      setLoading(false);
+    }
   };
 
   const shimmerStyles = `
@@ -228,7 +325,7 @@ function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate autoComplete="off">
             {!isLogin && (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
@@ -241,7 +338,6 @@ function LoginPage() {
                   onChange={handleInputChange}
                   className="form-input w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:bg-white/15"
                   placeholder="Enter your full name"
-                  required={!isLogin}
                 />
               </div>
             )}
@@ -257,7 +353,6 @@ function LoginPage() {
                 onChange={handleInputChange}
                 className="form-input w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:bg-white/15"
                 placeholder="Enter your email"
-                required
               />
             </div>
             
@@ -272,7 +367,6 @@ function LoginPage() {
                 onChange={handleInputChange}
                 className="form-input w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:bg-white/15"
                 placeholder="Enter your password"
-                required
               />
             </div>
             

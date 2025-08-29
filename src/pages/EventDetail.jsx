@@ -18,6 +18,8 @@ function EventDetail() {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [countdown, setCountdown] = useState(null);
+  const [eventStatus, setEventStatus] = useState('upcoming');
 
   // Check if user came from AI Chat
   const fromAiChat = location.state?.fromAiChat;
@@ -42,11 +44,23 @@ function EventDetail() {
       socketService.onSlotsUpdated(handleSlotsUpdate);
       socketService.onEventUpdated(handleEventUpdate);
       socketService.onEventDeleted(handleEventDeleted);
+      socketService.onCountdownUpdate(handleCountdownUpdate);
+
+      // Subscribe to this event's countdown
+      if (id) {
+        socketService.subscribeToEvent(parseInt(id));
+      }
 
       return () => {
         socketService.offSlotsUpdated(handleSlotsUpdate);
         socketService.offEventUpdated(handleEventUpdate);
         socketService.offEventDeleted(handleEventDeleted);
+        socketService.offCountdownUpdate(handleCountdownUpdate);
+        
+        // Unsubscribe from countdown
+        if (id) {
+          socketService.unsubscribeFromEvent(parseInt(id));
+        }
       };
     }
   }, [isAuthenticated, id]);
@@ -174,6 +188,13 @@ function EventDetail() {
     }
   };
 
+  const handleCountdownUpdate = (data) => {
+    if (data.eventId === parseInt(id)) {
+      setCountdown(data);
+      setEventStatus(data.status);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'}}>
@@ -233,7 +254,42 @@ function EventDetail() {
     : 0;
 
   const isCreator = user?.id === event?.created_by;
-  const isPastEvent = new Date(event?.time) < new Date();
+  
+  // Calculate event status and timing
+  const now = new Date();
+  const eventStart = new Date(event?.time || 0);
+  
+  // Don't fallback to 90, use actual duration or show error
+  const eventDuration = event?.duration;
+  if (!eventDuration || eventDuration <= 0) {
+    console.warn(`[EVENT DETAIL] Event has no valid duration: ${eventDuration}`);
+  }
+  
+  const eventEnd = eventDuration > 0 ? 
+    new Date(eventStart.getTime() + (eventDuration * 60000)) : 
+    eventStart; // If no duration, end time = start time
+    
+  const isPastEvent = now >= eventEnd;
+
+  // Format countdown time
+  const formatCountdownTime = (timeMs) => {
+    if (!timeMs || timeMs <= 0) return '0s';
+    
+    const days = Math.floor(timeMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeMs % (1000 * 60)) / 1000);
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
 
   // Handle back navigation
   const handleBackNavigation = () => {
@@ -306,6 +362,52 @@ function EventDetail() {
                 <div className="text-white/70 text-sm">Available Slots</div>
               </div>
             </div>
+
+            {/* Real-time Countdown Display */}
+            {countdown && (
+              <div className={`mb-6 p-6 rounded-2xl border ${
+                eventStatus === 'completed' ? 'bg-gray-500/20 border-gray-500/30' :
+                eventStatus === 'ongoing' ? 'bg-green-500/20 border-green-500/30' :
+                'bg-blue-500/20 border-blue-500/30'
+              }`}>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold mb-2 ${
+                    eventStatus === 'completed' ? 'text-gray-300' :
+                    eventStatus === 'ongoing' ? 'text-green-300' :
+                    'text-blue-300'
+                  }`}>
+                    {eventStatus === 'completed' ? '🏁 Event Completed' :
+                     eventStatus === 'ongoing' ? '🔴 Event Live' :
+                     '⏱️ Event Countdown'}
+                  </div>
+                  <div className={`text-4xl font-mono font-bold ${
+                    eventStatus === 'completed' ? 'text-gray-400' :
+                    eventStatus === 'ongoing' ? 'text-green-400' :
+                    'text-blue-400'
+                  }`}>
+                    {eventStatus === 'ongoing' && countdown.timeToEnd
+                      ? formatCountdownTime(countdown.timeToEnd)
+                      : eventStatus === 'upcoming' && countdown.timeToStart
+                      ? formatCountdownTime(countdown.timeToStart)
+                      : eventStatus === 'completed' ? 'Finished' : '--:--:--'
+                    }
+                  </div>
+                  <div className={`text-sm mt-2 ${
+                    eventStatus === 'completed' ? 'text-gray-400' :
+                    eventStatus === 'ongoing' ? 'text-green-400' :
+                    'text-blue-400'
+                  }`}>
+                    {eventStatus === 'ongoing' ? 'Time remaining' :
+                     eventStatus === 'upcoming' ? 'Time to start' :
+                     'Event has ended'}
+                  </div>
+                  {/* Duration info */}
+                  <div className="text-white/60 text-sm mt-2">
+                    Duration: {event?.duration ? `${event.duration} minutes` : 'Not set'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div>
@@ -446,9 +548,6 @@ function EventDetail() {
                             ★
                           </span>
                         ))}
-                        <span className="text-white/60 text-sm ml-2">
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </span>
                       </div>
                     </div>
                     <p className="text-white/80">{item.comment}</p>
